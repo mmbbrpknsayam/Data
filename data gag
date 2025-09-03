@@ -1,0 +1,13 @@
+local FairyEvent = game:GetService("ReplicatedStorage").Modules.UpdateService
+
+      if FairyEvent then
+        FairyEvent.Parent = workspace
+      end
+
+local BeanstalkEvent = game:GetService("ReplicatedStorage").Modules.UpdateService
+
+      if BeanstalkEvent then
+        BeanstalkEvent.Parent = workspace
+      end
+
+workspace:SetAttribute("Fairy_Event", true)
