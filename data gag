@@ -11,3 +11,30 @@ local BeanstalkEvent = game:GetService("ReplicatedStorage").Modules.UpdateServic
       end
 
 workspace:SetAttribute("Fairy_Event", true)
+
+
+
+
+Tabs.Main:CreateButton({
+    Title = "auto generators",
+    Description = "",
+    Callback = function()
+        task.spawn(function()
+            while true do
+                local generatorFolder = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
+                for _, gen in ipairs(generatorFolder:GetChildren()) do
+                    local remotes = gen:FindFirstChild("Remotes")
+                    if remotes then
+                        local re = remotes:FindFirstChild("RE")
+                        if re and re:IsA("RemoteEvent") then
+                            pcall(function()
+                                re:FireServer()
+                            end)
+                        end
+                    end
+                end
+                task.wait(4)
+            end
+        end)
+    end
+})
