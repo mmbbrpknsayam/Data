@@ -125,3 +125,101 @@ Toggle5:OnChanged(function()
         removeAllESP()
     end
 end)
+
+
+
+
+Tabs.Main:CreateButton({
+    Title = "auto generators",
+    Description = "",
+    Callback = function()
+        -- Auto Generator Repair (clean version)
+        local repairing = false
+        local currentGen = nil
+        local repairThread = nil
+        local genConnections = {}
+
+        local function stopAutoRepair()
+            if repairThread then
+                pcall(task.cancel, repairThread)
+                repairThread = nil
+            end
+            repairing = false
+            currentGen = nil
+        end
+
+        local function startAutoRepair(generator)
+            stopAutoRepair()
+            if not generator or not generator.Parent then return end
+
+            local progress = generator:FindFirstChild("Progress")
+            local remotes = generator:FindFirstChild("Remotes")
+            if not (progress and progress:IsA("NumberValue")) then return end
+            if not remotes then return end
+
+            local re = remotes:FindFirstChild("RE")
+            if not (re and re:IsA("RemoteEvent")) then return end
+
+            currentGen = generator
+            repairing = true
+
+            local progressConn
+            progressConn = progress:GetPropertyChangedSignal("Value"):Connect(function()
+                if progress.Value >= 100 then
+                    progressConn:Disconnect()
+                    stopAutoRepair()
+                end
+            end)
+            table.insert(genConnections, progressConn)
+
+            repairThread = task.spawn(function()
+                while repairing and currentGen == generator do
+                    if progress.Value >= 100 then
+                        stopAutoRepair()
+                        break
+                    end
+                    task.wait(3.5) -- wait 3s before firing
+                    if repairing and progress.Value < 100 then
+                        pcall(function()
+                            re:FireServer()
+                        end)
+                    end
+                end
+            end)
+        end
+
+        local function setupGenerator(gen)
+            if not gen or not gen:IsA("Model") then return end
+            if genConnections[gen] then return end
+
+            local prompt
+            local main = gen:FindFirstChild("Main")
+            if main then
+                prompt = main:FindFirstChildWhichIsA("ProximityPrompt", true) or main:FindFirstChild("Prompt")
+            end
+            if not prompt then
+                prompt = gen:FindFirstChildWhichIsA("ProximityPrompt", true)
+            end
+
+            if prompt then
+                local conn = prompt.Triggered:Connect(function()
+                    local progress = gen:FindFirstChild("Progress")
+                    if progress and progress.Value < 100 then
+                        startAutoRepair(gen)
+                    end
+                end)
+                table.insert(genConnections, conn)
+                genConnections[gen] = true
+            end
+        end
+
+        local generatorFolder = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
+        for _, g in ipairs(generatorFolder:GetChildren()) do
+            pcall(setupGenerator, g)
+        end
+
+        generatorFolder.ChildAdded:Connect(function(child)
+            pcall(setupGenerator, child)
+        end)
+    end
+})
