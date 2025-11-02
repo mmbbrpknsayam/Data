@@ -1,43 +1,42 @@
---------------------------------------------------------
--- ⚙️ SERVICES
---------------------------------------------------------
+--// Services
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
-local LocalPlayer = Players.LocalPlayer
 
+local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
 
---------------------------------------------------------
--- 🧭 PATHFINDING FUNCTION
---------------------------------------------------------
-local function moveTo(targetPart)
-	if not targetPart or not targetPart.Position then return end
+Humanoid.UseJumpPower = true
+Humanoid.JumpPower = 0
+
+--// Folders
+local MAP_ROOT = workspace:WaitForChild("Map"):WaitForChild("Ingame")
+
+--// Movement
+local function moveTo(pos)
+	if not pos then return end
 	local path = PathfindingService:CreatePath({
 		AgentRadius = 2,
 		AgentHeight = 5,
-		AgentCanJump = false
+		AgentCanJump = false,
 	})
-
-	path:ComputeAsync(HumanoidRootPart.Position, targetPart.Position)
+	path:ComputeAsync(RootPart.Position, pos)
 	if path.Status == Enum.PathStatus.Success then
-		for _, waypoint in ipairs(path:GetWaypoints()) do
-			Humanoid:MoveTo(waypoint.Position)
+		for _, wp in ipairs(path:GetWaypoints()) do
+			Humanoid:MoveTo(wp.Position)
 			Humanoid.MoveToFinished:Wait()
 		end
 	else
-		warn("Pathfinding failed.")
+		Humanoid:MoveTo(pos)
+		Humanoid.MoveToFinished:Wait()
 	end
 end
 
---------------------------------------------------------
--- 🔧 AUTO REPAIR LOGIC
---------------------------------------------------------
+--// Auto Repair
 local repairing = false
 local currentGen = nil
 local repairThread = nil
-local genConnections = {}
 
 local function stopAutoRepair()
 	if repairThread then
@@ -54,14 +53,15 @@ local function startAutoRepair(generator)
 
 	local progress = generator:FindFirstChild("Progress")
 	local remotes = generator:FindFirstChild("Remotes")
-	if not (progress and progress:IsA("NumberValue")) then return end
-	if not remotes then return end
+	if not (progress and remotes) then return end
 
 	local re = remotes:FindFirstChild("RE")
 	if not (re and re:IsA("RemoteEvent")) then return end
 
 	currentGen = generator
 	repairing = true
+
+	print("[AUTO REPAIR] Started:", generator:GetFullName())
 
 	local progressConn
 	progressConn = progress:GetPropertyChangedSignal("Value"):Connect(function()
@@ -70,7 +70,6 @@ local function startAutoRepair(generator)
 			stopAutoRepair()
 		end
 	end)
-	table.insert(genConnections, progressConn)
 
 	repairThread = task.spawn(function()
 		while repairing and currentGen == generator do
@@ -79,37 +78,74 @@ local function startAutoRepair(generator)
 				break
 			end
 			task.wait(4)
-			if repairing and progress.Value < 100 then
-				pcall(function()
-					re:FireServer()
-				end)
+			if repairing then
+				pcall(re.FireServer, re)
 			end
 		end
 	end)
 end
 
---------------------------------------------------------
--- 🔍 FIND NEAREST GENERATOR
---------------------------------------------------------
+--// RF Hooking
+local hookedRF = {}
+local rfToGenerator = {}
+
+local function hookGeneratorRF(gen)
+	local remotes = gen:FindFirstChild("Remotes")
+	if not remotes then return end
+	local rf = remotes:FindFirstChild("RF")
+	if not rf or hookedRF[rf] then return end
+
+	rfToGenerator[rf] = gen
+
+	local old = hookfunction(rf.InvokeServer, function(self, ...)
+		local args = {...}
+		if args[1] == "enter" then
+			local g = rfToGenerator[self]
+			if g then
+				print("[RF DETECTED] enter →", g.Name)
+				startAutoRepair(g)
+			end
+		end
+		return old(self, ...)
+	end)
+
+	hookedRF[rf] = old
+end
+
+local function hookAllGenerators()
+	local map = MAP_ROOT:FindFirstChild("Map")
+	if not map then return end
+	for _, gen in ipairs(map:GetChildren()) do
+		if gen.Name == "Generator" then
+			hookGeneratorRF(gen)
+		end
+	end
+end
+
+MAP_ROOT.ChildAdded:Connect(function(child)
+	if child.Name == "Map" then
+		child.ChildAdded:Connect(function(g)
+			if g.Name == "Generator" then
+				hookGeneratorRF(g)
+			end
+		end)
+		hookAllGenerators()
+	end
+end)
+
+hookAllGenerators()
+
+--// Helper
 local function getNearestGeneratorBelow100()
-	local mapFolder = workspace:FindFirstChild("Map")
-	if not mapFolder then return nil end
-
-	local ingame = mapFolder:FindFirstChild("Ingame")
-	if not ingame then return nil end
-
-	local map = ingame:FindFirstChild("Map")
+	local map = MAP_ROOT:FindFirstChild("Map")
 	if not map then return nil end
-
-	local nearest = nil
-	local shortest = math.huge
-
+	local nearest, shortest = nil, math.huge
 	for _, gen in ipairs(map:GetChildren()) do
 		if gen.Name == "Generator" then
 			local progress = gen:FindFirstChild("Progress")
-			local main = gen:FindFirstChild("Main")
-			if progress and progress:IsA("NumberValue") and progress.Value < 100 and main then
-				local dist = (HumanoidRootPart.Position - main.Position).Magnitude
+			local positions = gen:FindFirstChild("Positions")
+			if progress and progress.Value < 100 and positions and positions:FindFirstChild("Center") then
+				local dist = (RootPart.Position - positions.Center.Position).Magnitude
 				if dist < shortest then
 					shortest = dist
 					nearest = gen
@@ -117,79 +153,51 @@ local function getNearestGeneratorBelow100()
 			end
 		end
 	end
-
 	return nearest
 end
 
---------------------------------------------------------
--- 🤖 AUTO REPAIR LOOP
---------------------------------------------------------
-local function autoRepairLoop()
-	print("🧠 Waiting for map and generators...")
-	local map = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
+local function tryEnterGenerator(generator)
+	if not generator then return end
+	local positions = generator:FindFirstChild("Positions")
+	if not positions then return end
+	local order = {"Center", "Left", "Right"}
 
-	-- Wait until at least one generator exists
-	repeat
-		task.wait(1)
-	until map:FindFirstChild("Generator")
-
-	print("✅ Generators found! Starting auto repair loop...")
-
-	while task.wait(1) do
-		if repairing then continue end
-
-		local gen = getNearestGeneratorBelow100()
-		if not gen then
-			print("✅ All generators repaired! Waiting for match reset...")
-			break
-		end
-
-		local main = gen:FindFirstChild("Main")
-		local prompt = main and (main:FindFirstChild("Prompt") or main:FindFirstChildWhichIsA("ProximityPrompt"))
-		if main and prompt then
-			print("🧭 Moving to unfinished generator:", gen:GetFullName())
-			moveTo(main)
-			task.wait(0.3)
-			fireproximityprompt(prompt)
-			startAutoRepair(gen)
+	for _, name in ipairs(order) do
+		local pos = positions:FindFirstChild(name)
+		if pos then
+			moveTo(pos.Position)
+			task.wait(0.2)
+			for _, desc in ipairs(generator:GetDescendants()) do
+				if desc:IsA("ProximityPrompt") then
+					pcall(fireproximityprompt, desc)
+				end
+			end
 		end
 	end
 end
 
---------------------------------------------------------
--- 🔁 AUTO RESTART ON MAP RESET
---------------------------------------------------------
-local function onMapReset()
-	print("🔄 Map reset detected — restarting auto generator system...")
-	stopAutoRepair()
+--// Main Auto Match Loop
+task.spawn(function()
+	while true do
+		local map = MAP_ROOT:WaitForChild("Map", 60)
+		if not map then task.wait(1) continue end
 
-	task.wait(6) -- Wait for new map to fully load
-	Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	Humanoid = Character:WaitForChild("Humanoid")
-	HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+		hookAllGenerators()
 
-	task.spawn(autoRepairLoop)
-end
-
---------------------------------------------------------
--- 🚀 INITIALIZE SYSTEM
---------------------------------------------------------
-local function initAutoSystem()
-	print("✅ Auto Generator System initialized.")
-	task.spawn(autoRepairLoop)
-
-	workspace.Map.Ingame.ChildRemoved:Connect(function(child)
-		if child.Name == "Map" then
-			onMapReset()
+		while true do
+			local gen = getNearestGeneratorBelow100()
+			if not gen then break end
+			tryEnterGenerator(gen)
+			repeat task.wait(0.5) until not repairing
 		end
-	end)
-end
 
--- Wait for player character & start
-LocalPlayer.CharacterAdded:Connect(function(char)
-	Character = char
-	Humanoid = char:WaitForChild("Humanoid")
-	HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+		-- Wait for map reset between matches
+		local rootMap = MAP_ROOT:FindFirstChild("Map")
+		if rootMap then
+			repeat task.wait(0.5) until not rootMap.Parent or not rootMap:IsDescendantOf(workspace)
+		end
+		task.wait(1)
+	end
 end)
 
-task.spawn(initAutoSystem)
+print("[SYSTEM] Auto Generator: Running (instant RF detection, no timeout).")
