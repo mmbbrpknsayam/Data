@@ -87,7 +87,7 @@ local function startAutoRepair(generator)
 				stopAutoRepair()
 				break
 			end
-			task.wait(4.5)
+			task.wait(4)
 			if repairing and progress.Value < 100 then
 				pcall(function()
 					re:FireServer()
