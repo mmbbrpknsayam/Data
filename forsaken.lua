@@ -1,19 +1,21 @@
---------------------------------------------------------
--- ⚙️ SERVICES
---------------------------------------------------------
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
 local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local module_upvr = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+
+if not module_upvr.DefaultsSet then
+    module_upvr.Init()
+end
 
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
---------------------------------------------------------
--- 🧭 PATHFINDING FUNCTION
---------------------------------------------------------
 local function moveTo(targetPart)
 	if not targetPart or not targetPart.Position then return end
+
 	local path = PathfindingService:CreatePath({
 		AgentRadius = 2,
 		AgentHeight = 5,
@@ -27,13 +29,13 @@ local function moveTo(targetPart)
 			Humanoid.MoveToFinished:Wait()
 		end
 	else
-		warn("Pathfinding failed.")
+		Humanoid:MoveTo(targetPart.Position)
+		Humanoid.MoveToFinished:Wait()
 	end
+
+	repeat task.wait(0.1) until (HumanoidRootPart.Position - targetPart.Position).Magnitude < 5
 end
 
---------------------------------------------------------
--- 🔧 AUTO REPAIR LOGIC
---------------------------------------------------------
 local repairing = false
 local currentGen = nil
 local repairThread = nil
@@ -63,21 +65,38 @@ local function startAutoRepair(generator)
 	currentGen = generator
 	repairing = true
 
-	local progressConn
-	progressConn = progress:GetPropertyChangedSignal("Value"):Connect(function()
-		if progress.Value >= 100 then
-			progressConn:Disconnect()
-			stopAutoRepair()
+	task.spawn(function()
+		while repairing and currentGen == generator do
+			local puzzleUI = Players.LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI")
+			if not puzzleUI and progress.Value < 100 then
+				local positions = generator:FindFirstChild("Positions")
+				local main = generator:FindFirstChild("Main")
+				local prompt = main and (main:FindFirstChild("Prompt") or main:FindFirstChildWhichIsA("ProximityPrompt"))
+				if positions and prompt then
+					local retryTarget = positions:FindFirstChild("Center") or positions:FindFirstChildWhichIsA("BasePart")
+					if retryTarget then
+						moveTo(retryTarget)
+						fireproximityprompt(prompt)
+					end
+				end
+			end
+			task.wait(0.3)
 		end
 	end)
-	table.insert(genConnections, progressConn)
 
 	repairThread = task.spawn(function()
-		while repairing and currentGen == generator do
-			if progress.Value >= 100 then
-				stopAutoRepair()
-				break
+		-- fast watcher for instant completion
+		task.spawn(function()
+			while repairing and currentGen == generator do
+				if progress.Value >= 100 then
+					stopAutoRepair()
+					break
+				end
+				task.wait(0.2)
 			end
+		end)
+
+		while repairing and currentGen == generator do
 			task.wait(4)
 			if repairing and progress.Value < 100 then
 				pcall(function()
@@ -88,9 +107,6 @@ local function startAutoRepair(generator)
 	end)
 end
 
---------------------------------------------------------
--- 🔍 FIND NEAREST GENERATOR
---------------------------------------------------------
 local function getNearestGeneratorBelow100()
 	local mapFolder = workspace:FindFirstChild("Map")
 	if not mapFolder then return nil end
@@ -101,18 +117,20 @@ local function getNearestGeneratorBelow100()
 	local map = ingame:FindFirstChild("Map")
 	if not map then return nil end
 
-	local nearest = nil
-	local shortest = math.huge
+	local nearest, shortest = nil, math.huge
 
 	for _, gen in ipairs(map:GetChildren()) do
 		if gen.Name == "Generator" then
 			local progress = gen:FindFirstChild("Progress")
-			local main = gen:FindFirstChild("Main")
-			if progress and progress:IsA("NumberValue") and progress.Value < 100 and main then
-				local dist = (HumanoidRootPart.Position - main.Position).Magnitude
-				if dist < shortest then
-					shortest = dist
-					nearest = gen
+			local positions = gen:FindFirstChild("Positions")
+			if progress and progress:IsA("NumberValue") and progress.Value < 100 and positions then
+				local center = positions:FindFirstChild("Center")
+				if center then
+					local dist = (HumanoidRootPart.Position - center.Position).Magnitude
+					if dist < shortest then
+						shortest = dist
+						nearest = gen
+					end
 				end
 			end
 		end
@@ -121,61 +139,68 @@ local function getNearestGeneratorBelow100()
 	return nearest
 end
 
---------------------------------------------------------
--- 🤖 AUTO REPAIR LOOP
---------------------------------------------------------
 local function autoRepairLoop()
-	print("🧠 Waiting for map and generators...")
 	local map = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
 
-	-- Wait until at least one generator exists
-	repeat
-		task.wait(1)
-	until map:FindFirstChild("Generator")
-
-	print("✅ Generators found! Starting auto repair loop...")
+	repeat task.wait(1) until map:FindFirstChild("Generator")
 
 	while task.wait(1) do
 		if repairing then continue end
 
 		local gen = getNearestGeneratorBelow100()
 		if not gen then
-			print("✅ All generators repaired! Waiting for match reset...")
 			break
 		end
 
+		local positionsFolder = gen:FindFirstChild("Positions")
 		local main = gen:FindFirstChild("Main")
 		local prompt = main and (main:FindFirstChild("Prompt") or main:FindFirstChildWhichIsA("ProximityPrompt"))
-		if main and prompt then
-			print("🧭 Moving to unfinished generator:", gen:GetFullName())
-			moveTo(main)
-			task.wait(0.3)
-			fireproximityprompt(prompt)
-			startAutoRepair(gen)
+		if not positionsFolder or not prompt then continue end
+
+		local positions = {"Center", "Right", "Left"}
+		for _, posName in ipairs(positions) do
+			local targetPart = positionsFolder:FindFirstChild(posName)
+			if targetPart then
+				moveTo(targetPart)
+
+				fireproximityprompt(prompt)
+				task.wait(0.5)
+
+				if Players.LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI") then
+					startAutoRepair(gen)
+					break
+				end
+			end
 		end
 	end
 end
 
---------------------------------------------------------
--- 🔁 AUTO RESTART ON MAP RESET
---------------------------------------------------------
+local function toggleSprintAfterDelay()
+
+    task.wait(6)
+
+    module_upvr.__sprintedEvent:Fire(true)
+end
+
 local function onMapReset()
-	print("🔄 Map reset detected — restarting auto generator system...")
 	stopAutoRepair()
 
-	task.wait(6) -- Wait for new map to fully load
+	task.wait(6)
 	Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 	Humanoid = Character:WaitForChild("Humanoid")
 	HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
 	task.spawn(autoRepairLoop)
+
 end
 
---------------------------------------------------------
--- 🚀 INITIALIZE SYSTEM
---------------------------------------------------------
+workspace.Map.Ingame.ChildAdded:Connect(function(child)
+    if child.Name == "Map" then
+        task.spawn(toggleSprintAfterDelay)
+    end
+end)
+
 local function initAutoSystem()
-	print("✅ Auto Generator System initialized.")
 	task.spawn(autoRepairLoop)
 
 	workspace.Map.Ingame.ChildRemoved:Connect(function(child)
@@ -185,7 +210,6 @@ local function initAutoSystem()
 	end)
 end
 
--- Wait for player character & start
 LocalPlayer.CharacterAdded:Connect(function(char)
 	Character = char
 	Humanoid = char:WaitForChild("Humanoid")
