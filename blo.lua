@@ -19,58 +19,6 @@ local Tabs = {
     }
 }
 
-local Toggle1 = Tabs.Main:CreateToggle("MyToggle", {Title = "aimbot", Default = false})
-
-Toggle1:OnChanged(function()
-    if not Toggle1Interacted then
-        Toggle1Interacted = true
-        return
-    end
-
-    aimbotEnabled = not aimbotEnabled
-
-    if aimbotEnabled then
-
-        local AIMBOT_RANGE = 50
-
-        local function getClosestPlayer()
-            local closestPlayer = nil
-            local shortestDist = AIMBOT_RANGE
-            local myPosition = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
-
-            for _, player in pairs(game.Players:GetPlayers()) do
-                if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-                    local dist = (player.Character.Head.Position - myPosition).Magnitude
-
-                    if dist < shortestDist then
-                        shortestDist = dist
-                        closestPlayer = player
-                    end
-                end
-            end
-
-            return closestPlayer
-        end
-
-        local function aimAtNearestPlayer()
-            local closestPlayer = getClosestPlayer()
-
-            if closestPlayer then
-
-                local targetPosition = closestPlayer.Character.HumanoidRootPart.Position
-                local myPosition = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
-
-                local camera = game.Workspace.CurrentCamera
-                camera.CFrame = CFrame.new(camera.CFrame.Position, targetPosition)
-            end
-        end
-
-        while aimbotEnabled and wait(0) do
-            aimAtNearestPlayer()
-        end
-    end
-end)
-
 Tabs.Main:CreateButton({
     Title = "auto generators",
     Description = "",
@@ -154,9 +102,8 @@ Tabs.Main:CreateButton({
             end
         end
 
-        -- 🔥 Function that sets up generators whenever map is loaded
         local function setupMap()
-            -- Clear old connections
+
             for _, conn in ipairs(genConnections) do
                 pcall(function() conn:Disconnect() end)
             end
