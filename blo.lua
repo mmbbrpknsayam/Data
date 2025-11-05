@@ -143,16 +143,6 @@ Tabs.Main:CreateButton{
     end
 }
 
-Tabs.Main:CreateButton{
-    Title = "auto sprint",
-    Description = "",
-    Callback = function()
-        local staminaModule = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
-
-        staminaModule.DefaultConfig.IsSprinting = true
-    end
-}
-
 local Toggle9 = Tabs.Main:CreateToggle("MyToggle", {Title = "auto block", Default = false})
 
 local blockEnabled = false
@@ -260,8 +250,6 @@ Toggle9:OnChanged(function()
             end
         end)
         table.insert(humConnections, descConn)
-
-        print("Auto block ON (optimized, no cooldown, instant killer hook).")
     else
 
         for _, conn in ipairs(humConnections) do
@@ -270,7 +258,6 @@ Toggle9:OnChanged(function()
             end
         end
         humConnections = {}
-        print("Auto block OFF.")
     end
 end)
 
