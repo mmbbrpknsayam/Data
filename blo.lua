@@ -1,8 +1,8 @@
 local Library = loadstring(game:HttpGetAsync("https://github.com/ActualMasterOogway/Fluent-Renewed/releases/latest/download/Fluent.luau"))()
 
 local Window = Library:CreateWindow{
-    Title = 'Forsaken by Marble',
-    SubTitle = "discord.gg/SRShvnFc7",
+    Title = 'Forsaken by Cloud',
+    SubTitle = "https://discord.gg/tkA8JkqS8",
     TabWidth = 160,
     Size = UDim2.fromOffset(830, 525),
     Resize = true,
