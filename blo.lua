@@ -1,7 +1,7 @@
 local Library = loadstring(game:HttpGetAsync("https://github.com/ActualMasterOogway/Fluent-Renewed/releases/latest/download/Fluent.luau"))()
 
 local Window = Library:CreateWindow{
-    Title = `Forsaken by Marble`,
+    Title = 'Forsaken by Marble',
     SubTitle = "discord.gg/SRShvnFc7",
     TabWidth = 160,
     Size = UDim2.fromOffset(830, 525),
@@ -458,13 +458,6 @@ Toggle4:OnChanged(function()
     end
 end)
 
-local Tabs = {
-    Main = Window:CreateTab{
-        Title = "in-dev",
-        Icon = "nil"
-    }
-}
-
 local staminaa = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
 
 local Slider = Tabs.Main:CreateSlider("Slider", {
@@ -489,6 +482,13 @@ Tabs.Main:CreateButton{
     end
 }
 
+local Tabs = {
+    Main = Window:CreateTab{
+        Title = "Setting",
+        Icon = "nil"
+    }
+}
+
 local staminainput = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
 
 local Input = Tabs.Main:CreateInput("Input", {
@@ -498,24 +498,13 @@ local Input = Tabs.Main:CreateInput("Input", {
     Numeric = true,
     Finished = false,
     Callback = function(Value)
-        staminainput1 = Value
-        print("staminainput1 :", staminainput1)
+
+        local num = tonumber(Value)
+        if num then
+
+            staminainput.DefaultConfig.MaxStamina = num
+            staminainput.MaxStamina = num
+            staminainput.Stamina = num
+        end
     end
 })
-
-Tabs.Main:CreateButton{
-    Title = "apply stamina",
-    Description = "",
-    Callback = function()
-        staminainput.MaxStamina = staminainput1
-        staminainput.Stamina = math.min(staminainput1, staminainput.staminainput1)
-        print("Stamina applied:", staminainput.Stamina, "/", staminainput.MaxStamina)
-    end
-}
-
-local Tabs = {
-    Main = Window:CreateTab{
-        Title = "Setting",
-        Icon = "nil"
-    }
-}
