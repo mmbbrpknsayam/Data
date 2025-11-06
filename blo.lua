@@ -19,6 +19,25 @@ local Tabs = {
     }
 }
 
+local staminainput = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
+
+local Toggle1= Tabs.Main:CreateToggle("MyToggle", {Title = "inf stamina", Default = false})
+
+Toggle1:OnChanged(function()
+    if not Toggle1Interacted then
+        Toggle1Interacted = true
+        return
+    end
+
+    infstam = not infstam
+
+    if infstam then
+        staminainput.StaminaLossDisabled = true
+	else
+		staminainput.StaminaLossDisabled = false
+	end
+end)
+
 Tabs.Main:CreateButton({
     Title = "auto generators",
     Description = "",
@@ -132,16 +151,6 @@ Tabs.Main:CreateButton({
         end)
     end
 })
-
-Tabs.Main:CreateButton{
-    Title = "1k stamina",
-    Description = "",
-    Callback = function()
-        local staminaModule = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
-
-        staminaModule.DefaultConfig.MaxStamina = 1000
-    end
-}
 
 local Toggle9 = Tabs.Main:CreateToggle("MyToggle", {Title = "auto block", Default = false})
 
@@ -457,30 +466,6 @@ Toggle4:OnChanged(function()
         end
     end
 end)
-
-local staminaa = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
-
-local Slider = Tabs.Main:CreateSlider("Slider", {
-    Title = "stamina bar",
-    Description = "",
-    Default = 100,
-    Min = 100,
-    Max = 10000,
-    Rounding = 1,
-    Callback = function(Value)
-        staminaa.MaxStamina = Value
-        staminaa.Stamina = Value
-    end
-})
-
-Tabs.Main:CreateButton{
-    Title = "inf stamina",
-    Description = "",
-    Callback = function()
-        local staminagg = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
-        staminagg.StaminaLossDisabled = true
-    end
-}
 
 local Tabs = {
     Main = Window:CreateTab{
