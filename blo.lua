@@ -21,7 +21,7 @@ local Tabs = {
 
 local staminainput = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
 
-local Toggle1 Tabs.Main:CreateToggle("MyToggle", {Title = "inf stamina", Default = false})
+local Toggle1 = Tabs.Main:CreateToggle("MyToggle", {Title = "inf stamina", Default = false})
 
 Toggle1:OnChanged(function()
     if not Toggle1Interacted then
@@ -38,23 +38,34 @@ Toggle1:OnChanged(function()
 	end
 end)
 
-Tabs.Main:CreateButton({
-    Title = "auto generators",
-    Description = "",
-    Callback = function()
-        local repairing = false
-        local currentGen = nil
-        local repairThread = nil
-        local genConnections = {}
+local Toggle2 = Tabs.Main:CreateToggle("MyToggle", {Title = "auto generator", Default = false})
 
-        local function stopAutoRepair()
-            if repairThread then
-                pcall(task.cancel, repairThread)
-                repairThread = nil
-            end
-            repairing = false
-            currentGen = nil
-        end
+local repairing = false
+local currentGen = nil
+local repairThread = nil
+local genConnections = {}
+
+local function stopAutoRepair()
+    if repairThread then
+        pcall(task.cancel, repairThread)
+        repairThread = nil
+    end
+    repairing = false
+    currentGen = nil
+end
+
+Toggle2:OnChanged(function()
+    if not Toggle2Interacted then
+        Toggle2Interacted = true
+        return
+    end
+
+    maingen = not maingen
+
+    stopAutoRepair()
+    genConnections = {}
+
+    if maingen then
 
         local function startAutoRepair(generator)
             stopAutoRepair()
@@ -68,8 +79,8 @@ Tabs.Main:CreateButton({
             local re = remotes:FindFirstChild("RE")
             if not (re and re:IsA("RemoteEvent")) then return end
 
-            currentGen = generator
             repairing = true
+            currentGen = generator
 
             local progressConn
             progressConn = progress:GetPropertyChangedSignal("Value"):Connect(function()
@@ -81,13 +92,13 @@ Tabs.Main:CreateButton({
             table.insert(genConnections, progressConn)
 
             repairThread = task.spawn(function()
-                while repairing and currentGen == generator do
+                while repairing and currentGen == generator and maingen do
                     if progress.Value >= 100 then
                         stopAutoRepair()
                         break
                     end
-                    task.wait(gentime)
-                    if repairing and progress.Value < 100 then
+                    task.wait(4)
+                    if repairing and progress.Value < 100 and maingen then
                         pcall(function()
                             re:FireServer()
                         end)
@@ -111,6 +122,7 @@ Tabs.Main:CreateButton({
 
             if prompt then
                 local conn = prompt.Triggered:Connect(function()
+                    if not maingen then return end
                     local progress = gen:FindFirstChild("Progress")
                     if progress and progress.Value < 100 then
                         startAutoRepair(gen)
@@ -122,35 +134,37 @@ Tabs.Main:CreateButton({
         end
 
         local function setupMap()
-
-            for _, conn in ipairs(genConnections) do
-                pcall(function() conn:Disconnect() end)
-            end
-            genConnections = {}
-
             local map = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
             for _, g in ipairs(map:GetChildren()) do
                 pcall(setupGenerator, g)
             end
 
             map.ChildAdded:Connect(function(child)
-                pcall(setupGenerator, child)
+                if maingen then
+                    pcall(setupGenerator, child)
+                end
             end)
         end
 
         setupMap()
 
         workspace.Map.Ingame.ChildRemoved:Connect(function(child)
-            if child.Name == "Map" then
-
+            if child.Name == "Map" and maingen then
                 task.spawn(function()
                     local newMap = workspace.Map.Ingame:WaitForChild("Map")
                     setupMap()
                 end)
             end
         end)
+
+    else
+
+        stopAutoRepair()
+        genConnections = {}
     end
-})
+end)
+
+
 
 local Toggle9 = Tabs.Main:CreateToggle("MyToggle", {Title = "auto block", Default = false})
 
@@ -324,7 +338,7 @@ Toggle2:OnChanged(function()
     end
 
     local function applyToMap(map)
-        -- Apply to all current generators
+
         for _, obj in ipairs(map:GetChildren()) do
             if obj.Name == "Generator" then
                 createHighlight(obj)
