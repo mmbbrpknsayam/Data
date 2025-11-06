@@ -21,7 +21,7 @@ local Tabs = {
 
 local staminainput = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
 
-local Toggle1= Tabs.Main:CreateToggle("MyToggle", {Title = "inf stamina", Default = false})
+local Toggle1 Tabs.Main:CreateToggle("MyToggle", {Title = "inf stamina", Default = false})
 
 Toggle1:OnChanged(function()
     if not Toggle1Interacted then
@@ -86,7 +86,7 @@ Tabs.Main:CreateButton({
                         stopAutoRepair()
                         break
                     end
-                    task.wait(3.5)
+                    task.wait(gentime)
                     if repairing and progress.Value < 100 then
                         pcall(function()
                             re:FireServer()
@@ -490,6 +490,22 @@ local Input = Tabs.Main:CreateInput("Input", {
             staminainput.DefaultConfig.MaxStamina = num
             staminainput.MaxStamina = num
             staminainput.Stamina = num
+        end
+    end
+})
+
+local Input = Tabs.Main:CreateInput("Input", {
+    Title = "Generator time",
+    Default = "3.5",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+
+        local num = tonumber(Value)
+        if num then
+
+            gentime = num
         end
     end
 })
