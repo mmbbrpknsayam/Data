@@ -291,11 +291,11 @@ local Tabs = {
     }
 }
 
-local Toggle67 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp generator", Default = false})
+local Toggle6 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp generator", Default = false})
 
-Toggle67:OnChanged(function()
-    if not Toggle67Interacted then
-        Toggle67Interacted = true
+Toggle6:OnChanged(function()
+    if not Toggle6Interacted then
+        Toggle6Interacted = true
         return
     end
 
@@ -487,6 +487,92 @@ local Tabs = {
         Icon = "nil"
     }
 }
+
+local Toggle7 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp item", Default = false})
+
+Toggle7:OnChanged(function()
+    if not Toggle7Interacted then
+        Toggle7Interacted = true
+        return
+    end
+
+	espEnabled = not espEnabled
+
+    if espEnabled then
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+        local function createTextESP(model)
+            if not model:IsA("Model") then return end
+            if not model:FindFirstChildWhichIsA("BasePart") then return end
+
+            if model.Name == "BloxyCola" or model.Name == "Medkit" then
+                local billboardGui = Instance.new("BillboardGui")
+                billboardGui.Parent = model
+                billboardGui.Adornee = model
+                billboardGui.Size = UDim2.new(0, 200, 0, 30)
+                billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+                billboardGui.AlwaysOnTop = true
+
+                local textLabel = Instance.new("TextLabel")
+                textLabel.Parent = billboardGui
+                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                textLabel.BackgroundTransparency = 1
+                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                textLabel.TextStrokeTransparency = 0.3
+                textLabel.TextSize = 8
+                textLabel.Font = Enum.Font.SourceSansBold
+                textLabel.Text = "[" .. model.Name .. " - Distance: --]"
+
+                table.insert(espVisuals, billboardGui)
+
+                local heartbeatConn
+                heartbeatConn = game:GetService("RunService").Heartbeat:Connect(function()
+                    if not espEnabled then
+                        if heartbeatConn then heartbeatConn:Disconnect() end
+                        return
+                    end
+                    if not model.Parent then
+                        billboardGui:Destroy()
+                        if heartbeatConn then heartbeatConn:Disconnect() end
+                        return
+                    end
+                    local distance = (model:GetModelCFrame().Position - humanoidRootPart.Position).Magnitude
+                    textLabel.Text = "[" .. model.Name .. " - Distance: " .. math.floor(distance) .. " studs]"
+                end)
+            end
+        end
+
+        local itemsFolder = workspace:FindFirstChild("Map")
+        if itemsFolder then
+            itemsFolder = itemsFolder:FindFirstChild("Ingame")
+        end
+        if itemsFolder then
+            itemsFolder = itemsFolder:FindFirstChild("Map")
+        end
+
+        if itemsFolder then
+            for _, model in pairs(itemsFolder:GetChildren()) do
+                createTextESP(model)
+            end
+
+            itemsFolder.ChildAdded:Connect(function(newModel)
+                if espEnabled then
+                    createTextESP(newModel)
+                end
+            end)
+        end
+    else
+
+        for _, v in pairs(espVisuals) do
+            if v and v.Parent then
+                v:Destroy()
+            end
+        end
+        espVisuals = {}
+    end
+end)
 
 local staminainput = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
 
