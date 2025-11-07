@@ -481,76 +481,13 @@ Toggle4:OnChanged(function()
     end
 end)
 
-local Toggle12 = Tabs.Main:CreateToggle("MyToggle", {Title = "ESP", Default = false})
+local Toggle12 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp item", Default = false})
 
 local espVisuals = {}
 local espEnabled = false
 local Toggle12Interacted = false
+local mapConnection
 
--- Function to create ESP text above models
-local function createTextESP(model)
-    if not model:IsA("Model") then return end
-    if not model:FindFirstChildWhichIsA("BasePart") then return end
-
-    if model.Name == "BloxyCola" or model.Name == "Medkit" then
-        local billboardGui = Instance.new("BillboardGui")
-        billboardGui.Parent = model
-        billboardGui.Adornee = model
-        billboardGui.Size = UDim2.new(0, 200, 0, 30)
-        billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-        billboardGui.AlwaysOnTop = true
-
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Parent = billboardGui
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        textLabel.TextStrokeTransparency = 0.3
-        textLabel.TextSize = 8
-        textLabel.Font = Enum.Font.SourceSansBold
-        textLabel.Text = "[" .. model.Name .. "]"
-
-        table.insert(espVisuals, billboardGui)
-    end
-end
-
--- Function to apply ESP to current map
-local function applyESP()
-    if not espEnabled then return end
-
-    -- Locate the items folder dynamically each time
-    local itemsFolder = workspace:FindFirstChild("Map")
-    if itemsFolder then
-        itemsFolder = itemsFolder:FindFirstChild("Ingame")
-    end
-    if itemsFolder then
-        itemsFolder = itemsFolder:FindFirstChild("Map")
-    end
-
-    if itemsFolder then
-        -- Create ESP for existing items
-        for _, model in pairs(itemsFolder:GetChildren()) do
-            createTextESP(model)
-        end
-
-        -- Connect for new spawned items
-        itemsFolder.ChildAdded:Connect(function(newModel)
-            if espEnabled then
-                createTextESP(newModel)
-            end
-        end)
-    end
-end
-
--- Watch for Map being replaced (when match resets)
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "Map" and espEnabled then
-        task.wait(1) -- wait a bit for Map to fully load
-        applyESP()
-    end
-end)
-
--- Toggle handler
 Toggle12:OnChanged(function()
     if not Toggle12Interacted then
         Toggle12Interacted = true
@@ -559,16 +496,107 @@ Toggle12:OnChanged(function()
 
     espEnabled = not espEnabled
 
+    -- Clean up old ESP visuals and connections
+    for _, v in pairs(espVisuals) do
+        if v and v.Parent then
+            v:Destroy()
+        end
+    end
+    espVisuals = {}
+
+    if mapConnection then
+        mapConnection:Disconnect()
+        mapConnection = nil
+    end
+
     if espEnabled then
-        applyESP()
-    else
-        -- Disable ESP and clean up
-        for _, v in pairs(espVisuals) do
-            if v and v.Parent then
-                v:Destroy()
+        local function createTextESP(model)
+            if not model:IsA("Model") then return end
+            if not model:FindFirstChildWhichIsA("BasePart") then return end
+
+            if model.Name == "BloxyCola" or model.Name == "Medkit" then
+                local billboardGui = Instance.new("BillboardGui")
+                billboardGui.Parent = model
+                billboardGui.Adornee = model
+                billboardGui.Size = UDim2.new(0, 200, 0, 30)
+                billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+                billboardGui.AlwaysOnTop = true
+
+                local textLabel = Instance.new("TextLabel")
+                textLabel.Parent = billboardGui
+                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                textLabel.BackgroundTransparency = 1
+                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                textLabel.TextStrokeTransparency = 0.3
+                textLabel.TextSize = 8
+                textLabel.Font = Enum.Font.SourceSansBold
+                textLabel.Text = "[" .. model.Name .. "]"
+
+                table.insert(espVisuals, billboardGui)
             end
         end
-        espVisuals = {}
+
+        -- Function to find the current active map inside workspace
+        local function getActiveMap()
+            local map = workspace:FindFirstChild("Map")
+            if map and map:FindFirstChild("Ingame") then
+                local ingame = map.Ingame:FindFirstChild("Map")
+                if ingame then
+                    return ingame
+                end
+            end
+            return nil
+        end
+
+        -- Repeatedly wait for the correct map to exist before applying ESP
+        task.spawn(function()
+            local itemsFolder
+            repeat
+                itemsFolder = getActiveMap()
+                task.wait(1)
+            until itemsFolder or not espEnabled
+            if not espEnabled then return end
+
+            -- Apply ESP to current map
+            for _, model in pairs(itemsFolder:GetChildren()) do
+                createTextESP(model)
+            end
+
+            -- Watch for new items appearing in the map
+            mapConnection = itemsFolder.ChildAdded:Connect(function(newModel)
+                if espEnabled then
+                    createTextESP(newModel)
+                end
+            end)
+
+            -- Watch for map changes (e.g., new match)
+            workspace.Map.Ingame.ChildAdded:Connect(function(newMap)
+                if newMap.Name == "Map" then
+                    -- Re-enable ESP on the new map
+                    for _, v in pairs(espVisuals) do
+                        if v and v.Parent then
+                            v:Destroy()
+                        end
+                    end
+                    espVisuals = {}
+                    if mapConnection then
+                        mapConnection:Disconnect()
+                    end
+                    mapConnection = nil
+                    task.wait(0.5)
+                    if espEnabled then
+                        for _, model in pairs(newMap:GetChildren()) do
+                            createTextESP(model)
+                        end
+                        mapConnection = newMap.ChildAdded:Connect(function(newModel)
+                            if espEnabled then
+                                createTextESP(newModel)
+                            end
+                        end)
+                    end
+                end
+            end)
+        end)
     end
 end)
 
