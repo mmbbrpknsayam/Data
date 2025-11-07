@@ -19,7 +19,7 @@ local Tabs = {
     }
 }
 
-local staminainput = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
+local customstam = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
 
 local Toggle1 = Tabs.Main:CreateToggle("MyToggle", {Title = "inf stamina", Default = false})
 
@@ -29,12 +29,12 @@ Toggle1:OnChanged(function()
         return
     end
 
-    infstam = not infstam
+    infstamcustomstam = not infstamcustomstam
 
     if infstam then
-        staminainput.StaminaLossDisabled = true
+        customstam.StaminaLossDisabled = true
 	else
-		staminainput.StaminaLossDisabled = false
+		customstam.StaminaLossDisabled = false
 	end
 end)
 
