@@ -32,9 +32,9 @@ Toggle1:OnChanged(function()
     infstamcustomstam = not infstamcustomstam
 
     if infstamcustomstam then
-		customstam.StaminaLossDisabled = true
+		customstam.DefaultConfig.StaminaLossDisabled = true
 	else
-		customstam.StaminaLossDisabled = false
+		customstam.DefaultConfig.StaminaLossDisabled = false
 	end
 end)
 
