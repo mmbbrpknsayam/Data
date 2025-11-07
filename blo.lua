@@ -481,21 +481,44 @@ Toggle4:OnChanged(function()
     end
 end)
 
-local Tabs = {
-    Main = Window:CreateTab{
-        Title = "Setting",
-        Icon = "nil"
-    }
-}
-
 local Toggle12 = Tabs.Main:CreateToggle("MyToggle", {Title = "ESP", Default = false})
 
 local espVisuals = {}
 local espEnabled = false
 local Toggle12Interacted = false
 
-local function setupESP()
-    -- Path to your items
+-- Function to create ESP text above models
+local function createTextESP(model)
+    if not model:IsA("Model") then return end
+    if not model:FindFirstChildWhichIsA("BasePart") then return end
+
+    if model.Name == "BloxyCola" or model.Name == "Medkit" then
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Parent = model
+        billboardGui.Adornee = model
+        billboardGui.Size = UDim2.new(0, 200, 0, 30)
+        billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+        billboardGui.AlwaysOnTop = true
+
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Parent = billboardGui
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextStrokeTransparency = 0.3
+        textLabel.TextSize = 8
+        textLabel.Font = Enum.Font.SourceSansBold
+        textLabel.Text = "[" .. model.Name .. "]"
+
+        table.insert(espVisuals, billboardGui)
+    end
+end
+
+-- Function to apply ESP to current map
+local function applyESP()
+    if not espEnabled then return end
+
+    -- Locate the items folder dynamically each time
     local itemsFolder = workspace:FindFirstChild("Map")
     if itemsFolder then
         itemsFolder = itemsFolder:FindFirstChild("Ingame")
@@ -504,48 +527,30 @@ local function setupESP()
         itemsFolder = itemsFolder:FindFirstChild("Map")
     end
 
-    if not itemsFolder then return end
-
-    local function createTextESP(model)
-        if not model:IsA("Model") then return end
-        if not model:FindFirstChildWhichIsA("BasePart") then return end
-
-        -- Only show ESP for BloxyCola and Medkit
-        if model.Name == "BloxyCola" or model.Name == "Medkit" then
-            local billboardGui = Instance.new("BillboardGui")
-            billboardGui.Parent = model
-            billboardGui.Adornee = model
-            billboardGui.Size = UDim2.new(0, 200, 0, 30)
-            billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-            billboardGui.AlwaysOnTop = true
-
-            local textLabel = Instance.new("TextLabel")
-            textLabel.Parent = billboardGui
-            textLabel.Size = UDim2.new(1, 0, 1, 0)
-            textLabel.BackgroundTransparency = 1
-            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            textLabel.TextStrokeTransparency = 0.3
-            textLabel.TextSize = 8
-            textLabel.Font = Enum.Font.SourceSansBold
-            textLabel.Text = "[" .. model.Name .. "]"
-
-            table.insert(espVisuals, billboardGui)
+    if itemsFolder then
+        -- Create ESP for existing items
+        for _, model in pairs(itemsFolder:GetChildren()) do
+            createTextESP(model)
         end
-    end
 
-    -- Apply ESP to existing items
-    for _, model in pairs(itemsFolder:GetChildren()) do
-        createTextESP(model)
+        -- Connect for new spawned items
+        itemsFolder.ChildAdded:Connect(function(newModel)
+            if espEnabled then
+                createTextESP(newModel)
+            end
+        end)
     end
-
-    -- Watch for new items added
-    itemsFolder.ChildAdded:Connect(function(newModel)
-        if espEnabled then
-            createTextESP(newModel)
-        end
-    end)
 end
 
+-- Watch for Map being replaced (when match resets)
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "Map" and espEnabled then
+        task.wait(1) -- wait a bit for Map to fully load
+        applyESP()
+    end
+end)
+
+-- Toggle handler
 Toggle12:OnChanged(function()
     if not Toggle12Interacted then
         Toggle12Interacted = true
@@ -555,19 +560,7 @@ Toggle12:OnChanged(function()
     espEnabled = not espEnabled
 
     if espEnabled then
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        character:WaitForChild("HumanoidRootPart")
-
-        setupESP()
-
-        -- Watch for map resets (new rounds)
-        workspace.ChildAdded:Connect(function(child)
-            if child.Name == "Map" and espEnabled then
-                task.wait(3) -- wait a few seconds for map to fully load
-                setupESP()
-            end
-        end)
+        applyESP()
     else
         -- Disable ESP and clean up
         for _, v in pairs(espVisuals) do
@@ -578,6 +571,13 @@ Toggle12:OnChanged(function()
         espVisuals = {}
     end
 end)
+
+local Tabs = {
+    Main = Window:CreateTab{
+        Title = "Setting",
+        Icon = "nil"
+    }
+}
 
 local staminainput = require(game.ReplicatedStorage.Systems.Character.Game.Sprinting)
 
