@@ -299,8 +299,8 @@ Toggle2:OnChanged(function()
         return
     end
 
-    espGenerator = not espGenerator
-    local connections = {}
+    espgenn = not espgenn
+    local gens = {}
 
     local function updateHighlight(generator, highlight)
         local numVal = generator:FindFirstChildWhichIsA("NumberValue")
@@ -365,13 +365,13 @@ Toggle2:OnChanged(function()
             hookMap(child)
         end
 
-        table.insert(connections, ingame.ChildAdded:Connect(hookMap))
+        table.insert(gens, ingame.ChildAdded:Connect(hookMap))
     else
 
-        for _, c in ipairs(connections) do
+        for _, c in ipairs(gens) do
             c:Disconnect()
         end
-        table.clear(connections)
+        table.clear(gens)
 
         local currentMap = workspace:FindFirstChild("Map") and workspace.Map.Ingame:FindFirstChild("Map")
         if currentMap then
