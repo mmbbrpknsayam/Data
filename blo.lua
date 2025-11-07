@@ -284,6 +284,67 @@ Toggle9:OnChanged(function()
     end
 end)
 
+local Toggle8 = Tabs.Main:CreateToggle("MyToggle", {Title = "fb", Default = false})
+
+local fbConnections = {}
+local Lighting = game:GetService("Lighting")
+
+Toggle1:OnChanged(function()
+    if not Toggle8Interacted then
+        Toggle8Interacted = true
+        return
+    end
+
+    fb = not fb
+
+    if fb then
+
+        Lighting.Brightness = 2
+        Lighting.GlobalShadows = false
+        Lighting.ClockTime = 14
+
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("Atmosphere") then
+                v:Destroy()
+            end
+        end
+
+        fbConnections.Brightness = Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
+            if Lighting.Brightness ~= 2 then
+                Lighting.Brightness = 2
+            end
+        end)
+
+        fbConnections.GlobalShadows = Lighting:GetPropertyChangedSignal("GlobalShadows"):Connect(function()
+            if Lighting.GlobalShadows ~= false then
+                Lighting.GlobalShadows = false
+            end
+        end)
+
+        fbConnections.ClockTime = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+            if Lighting.ClockTime ~= 14 then
+                Lighting.ClockTime = 14
+            end
+        end)
+
+        fbConnections.ChildAdded = Lighting.ChildAdded:Connect(function(child)
+            if child:IsA("Atmosphere") then
+                task.wait()
+                child:Destroy()
+            end
+        end)
+
+    else
+
+        for _, conn in pairs(fbConnections) do
+            if conn and conn.Disconnect then
+                conn:Disconnect()
+            end
+        end
+        fbConnections = {}
+    end
+end)
+
 local Tabs = {
     Main = Window:CreateTab{
         Title = "esp",
