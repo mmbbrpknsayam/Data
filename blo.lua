@@ -331,7 +331,7 @@ Toggle2:OnChanged(function()
 
         local numVal = generator:FindFirstChildWhichIsA("NumberValue")
         if numVal then
-            table.insert(connections, numVal:GetPropertyChangedSignal("Value"):Connect(function()
+            table.insert(gens, numVal:GetPropertyChangedSignal("Value"):Connect(function()
                 updateHighlight(generator, highlight)
             end))
         end
@@ -352,7 +352,7 @@ Toggle2:OnChanged(function()
         end))
     end
 
-    if espGenerator then
+    if espgenn then
 
         local function hookMap(map)
             if map.Name == "Map" then
