@@ -291,11 +291,11 @@ local Tabs = {
     }
 }
 
-local Toggle2 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp generator", Default = false})
+local Toggle67 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp generator", Default = false})
 
-Toggle2:OnChanged(function()
-    if not Toggle2Interacted then
-        Toggle2Interacted = true
+Toggle67:OnChanged(function()
+    if not Toggle67Interacted then
+        Toggle67Interacted = true
         return
     end
 
@@ -345,7 +345,7 @@ Toggle2:OnChanged(function()
             end
         end
 
-        table.insert(connections, map.ChildAdded:Connect(function(child)
+        table.insert(gens, map.ChildAdded:Connect(function(child)
             if child.Name == "Generator" then
                 createHighlight(child)
             end
