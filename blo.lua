@@ -29,12 +29,14 @@ Toggle1:OnChanged(function()
         return
     end
 
-    infstamcustomstam = not infstamcustomstam
+    infstam = not infstam
 
-    if infstamcustomstam then
+    if infstam then
 		customstam.DefaultConfig.StaminaLossDisabled = true
+		customstam.StaminaLossDisabled = true
 	else
 		customstam.DefaultConfig.StaminaLossDisabled = false
+		customstam.StaminaLossDisabled = false
 	end
 end)
 
@@ -166,15 +168,15 @@ end)
 
 
 
-local Toggle9 = Tabs.Main:CreateToggle("MyToggle", {Title = "auto block", Default = false})
+local Toggle3 = Tabs.Main:CreateToggle("MyToggle", {Title = "auto block", Default = false})
 
 local blockEnabled = false
-local Toggle9Interacted = false
+local Toggle3Interacted = false
 local humConnections = {}
 
-Toggle9:OnChanged(function()
-    if not Toggle9Interacted then
-        Toggle9Interacted = true
+Toggle3:OnChanged(function()
+    if not Toggle3Interacted then
+        Toggle3Interacted = true
         return
     end
 
@@ -284,14 +286,16 @@ Toggle9:OnChanged(function()
     end
 end)
 
-local Toggle8 = Tabs.Main:CreateToggle("MyToggle", {Title = "fb", Default = false})
-
-local fbConnections = {}
 local Lighting = game:GetService("Lighting")
 
-Toggle1:OnChanged(function()
-    if not Toggle8Interacted then
-        Toggle8Interacted = true
+local Toggle4 = Tabs.Main:CreateToggle("MyToggle", {Title = "fb + nofog", Default = false})
+
+local fbConnections = {}
+local fb = false
+
+Toggle4:OnChanged(function()
+    if not Toggle4Interacted then
+        Toggle4Interacted = true
         return
     end
 
@@ -352,11 +356,11 @@ local Tabs = {
     }
 }
 
-local Toggle6 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp generator", Default = false})
+local Toggle20 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp generator", Default = false})
 
-Toggle6:OnChanged(function()
-    if not Toggle6Interacted then
-        Toggle6Interacted = true
+Toggle20:OnChanged(function()
+    if not Toggle20Interacted then
+        Toggle20Interacted = true
         return
     end
 
@@ -448,11 +452,11 @@ Toggle6:OnChanged(function()
     end
 end)
 
-local Toggle3 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp survivor", Default = false})
+local Toggle21 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp survivor", Default = false})
 
-Toggle3:OnChanged(function()
-    if not Toggle3Interacted then
-        Toggle3Interacted = true
+Toggle21:OnChanged(function()
+    if not Toggle21Interacted then
+        Toggle21Interacted = true
         return
     end
 
@@ -495,11 +499,11 @@ Toggle3:OnChanged(function()
     end
 end)
 
-local Toggle4 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp killer", Default = false})
+local Toggle22 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp killer", Default = false})
 
-Toggle4:OnChanged(function()
-    if not Toggle4Interacted then
-        Toggle4Interacted = true
+Toggle22:OnChanged(function()
+    if not Toggle22Interacted then
+        Toggle22Interacted = true
         return
     end
 
@@ -542,16 +546,15 @@ Toggle4:OnChanged(function()
     end
 end)
 
-local Toggle12 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp item", Default = false})
+local Toggle23 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp item", Default = false})
 
 local espVisuals = {}
 local espEnabled = false
-local Toggle12Interacted = false
 local mapConnection
 
-Toggle12:OnChanged(function()
-    if not Toggle12Interacted then
-        Toggle12Interacted = true
+Toggle23:OnChanged(function()
+    if not Toggle23Interacted then
+        Toggle23Interacted = true
         return
     end
 
