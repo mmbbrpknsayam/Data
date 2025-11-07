@@ -488,25 +488,30 @@ local Tabs = {
     }
 }
 
-local Toggle7 = Tabs.Main:CreateToggle("MyToggle", {Title = "esp item", Default = false})
+local Toggle12 = Tabs.Main:CreateToggle("MyToggle", {Title = "ESP", Default = false})
 
-Toggle7:OnChanged(function()
-    if not Toggle7Interacted then
-        Toggle7Interacted = true
+local espVisuals = {}
+local espEnabled = false
+local Toggle12Interacted = false
+
+Toggle12:OnChanged(function()
+    if not Toggle12Interacted then
+        Toggle12Interacted = true
         return
     end
 
-	espEnabled = not espEnabled
+    espEnabled = not espEnabled
 
     if espEnabled then
         local player = game.Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
-        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        character:WaitForChild("HumanoidRootPart")
 
         local function createTextESP(model)
             if not model:IsA("Model") then return end
             if not model:FindFirstChildWhichIsA("BasePart") then return end
 
+            -- Only show ESP for BloxyCola and Medkit
             if model.Name == "BloxyCola" or model.Name == "Medkit" then
                 local billboardGui = Instance.new("BillboardGui")
                 billboardGui.Parent = model
@@ -523,27 +528,13 @@ Toggle7:OnChanged(function()
                 textLabel.TextStrokeTransparency = 0.3
                 textLabel.TextSize = 8
                 textLabel.Font = Enum.Font.SourceSansBold
-                textLabel.Text = "[" .. model.Name .. " - Distance: --]"
+                textLabel.Text = "[" .. model.Name .. "]"
 
                 table.insert(espVisuals, billboardGui)
-
-                local heartbeatConn
-                heartbeatConn = game:GetService("RunService").Heartbeat:Connect(function()
-                    if not espEnabled then
-                        if heartbeatConn then heartbeatConn:Disconnect() end
-                        return
-                    end
-                    if not model.Parent then
-                        billboardGui:Destroy()
-                        if heartbeatConn then heartbeatConn:Disconnect() end
-                        return
-                    end
-                    local distance = (model:GetModelCFrame().Position - humanoidRootPart.Position).Magnitude
-                    textLabel.Text = "[" .. model.Name .. " - Distance: " .. math.floor(distance) .. " studs]"
-                end)
             end
         end
 
+        -- Path to your items
         local itemsFolder = workspace:FindFirstChild("Map")
         if itemsFolder then
             itemsFolder = itemsFolder:FindFirstChild("Ingame")
@@ -564,7 +555,7 @@ Toggle7:OnChanged(function()
             end)
         end
     else
-
+        -- Disable ESP and clean up
         for _, v in pairs(espVisuals) do
             if v and v.Parent then
                 v:Destroy()
