@@ -31,7 +31,7 @@ Toggle1:OnChanged(function()
 
     infstamcustomstam = not infstamcustomstam
 
-    if infstam then
+    if infstamcustomstam then
         customstam.StaminaLossDisabled = true
 	else
 		customstam.StaminaLossDisabled = false
