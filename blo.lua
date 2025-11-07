@@ -494,6 +494,58 @@ local espVisuals = {}
 local espEnabled = false
 local Toggle12Interacted = false
 
+local function setupESP()
+    -- Path to your items
+    local itemsFolder = workspace:FindFirstChild("Map")
+    if itemsFolder then
+        itemsFolder = itemsFolder:FindFirstChild("Ingame")
+    end
+    if itemsFolder then
+        itemsFolder = itemsFolder:FindFirstChild("Map")
+    end
+
+    if not itemsFolder then return end
+
+    local function createTextESP(model)
+        if not model:IsA("Model") then return end
+        if not model:FindFirstChildWhichIsA("BasePart") then return end
+
+        -- Only show ESP for BloxyCola and Medkit
+        if model.Name == "BloxyCola" or model.Name == "Medkit" then
+            local billboardGui = Instance.new("BillboardGui")
+            billboardGui.Parent = model
+            billboardGui.Adornee = model
+            billboardGui.Size = UDim2.new(0, 200, 0, 30)
+            billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+            billboardGui.AlwaysOnTop = true
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Parent = billboardGui
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            textLabel.TextStrokeTransparency = 0.3
+            textLabel.TextSize = 8
+            textLabel.Font = Enum.Font.SourceSansBold
+            textLabel.Text = "[" .. model.Name .. "]"
+
+            table.insert(espVisuals, billboardGui)
+        end
+    end
+
+    -- Apply ESP to existing items
+    for _, model in pairs(itemsFolder:GetChildren()) do
+        createTextESP(model)
+    end
+
+    -- Watch for new items added
+    itemsFolder.ChildAdded:Connect(function(newModel)
+        if espEnabled then
+            createTextESP(newModel)
+        end
+    end)
+end
+
 Toggle12:OnChanged(function()
     if not Toggle12Interacted then
         Toggle12Interacted = true
@@ -507,53 +559,15 @@ Toggle12:OnChanged(function()
         local character = player.Character or player.CharacterAdded:Wait()
         character:WaitForChild("HumanoidRootPart")
 
-        local function createTextESP(model)
-            if not model:IsA("Model") then return end
-            if not model:FindFirstChildWhichIsA("BasePart") then return end
+        setupESP()
 
-            -- Only show ESP for BloxyCola and Medkit
-            if model.Name == "BloxyCola" or model.Name == "Medkit" then
-                local billboardGui = Instance.new("BillboardGui")
-                billboardGui.Parent = model
-                billboardGui.Adornee = model
-                billboardGui.Size = UDim2.new(0, 200, 0, 30)
-                billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-                billboardGui.AlwaysOnTop = true
-
-                local textLabel = Instance.new("TextLabel")
-                textLabel.Parent = billboardGui
-                textLabel.Size = UDim2.new(1, 0, 1, 0)
-                textLabel.BackgroundTransparency = 1
-                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                textLabel.TextStrokeTransparency = 0.3
-                textLabel.TextSize = 8
-                textLabel.Font = Enum.Font.SourceSansBold
-                textLabel.Text = "[" .. model.Name .. "]"
-
-                table.insert(espVisuals, billboardGui)
+        -- Watch for map resets (new rounds)
+        workspace.ChildAdded:Connect(function(child)
+            if child.Name == "Map" and espEnabled then
+                task.wait(3) -- wait a few seconds for map to fully load
+                setupESP()
             end
-        end
-
-        -- Path to your items
-        local itemsFolder = workspace:FindFirstChild("Map")
-        if itemsFolder then
-            itemsFolder = itemsFolder:FindFirstChild("Ingame")
-        end
-        if itemsFolder then
-            itemsFolder = itemsFolder:FindFirstChild("Map")
-        end
-
-        if itemsFolder then
-            for _, model in pairs(itemsFolder:GetChildren()) do
-                createTextESP(model)
-            end
-
-            itemsFolder.ChildAdded:Connect(function(newModel)
-                if espEnabled then
-                    createTextESP(newModel)
-                end
-            end)
-        end
+        end)
     else
         -- Disable ESP and clean up
         for _, v in pairs(espVisuals) do
